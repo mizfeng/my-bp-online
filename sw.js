@@ -3,7 +3,7 @@
  * 版本: v1.0.0
  */
 
-const CACHE_NAME = 'my-bp-cache-v1.0.3';
+const CACHE_NAME = 'my-bp-cache-v1.0.4';
 
 const ASSETS_TO_CACHE = [
   './',

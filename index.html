@@ -14,6 +14,18 @@
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="icon" type="image/png" href="./icons/icon-192.png">
 
+  <!-- 偵測 LINE 內建瀏覽器，自動跳出至手機預設瀏覽器以支援 PWA 安裝 -->
+  <script>
+    (function () {
+      var ua = navigator.userAgent || navigator.vendor || window.opera;
+      var isLine = /Line\//i.test(ua);
+      if (isLine && !window.location.search.includes('openExternalBrowser=1')) {
+        var sep = window.location.search ? '&' : '?';
+        window.location.href = window.location.href + sep + 'openExternalBrowser=1';
+      }
+    })();
+  </script>
+
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
