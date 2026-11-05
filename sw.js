@@ -1,9 +1,11 @@
 /**
  * sw.js - Service Worker 離線快取管理
- * 版本: v1.0.5
+ * 版本號由 js/version.js 單一來源控制，此檔案無須手動更改版本
  */
 
-const CACHE_NAME = 'my-bp-cache-v1.0.5';
+importScripts('./js/version.js');
+
+const CACHE_NAME = 'my-bp-cache-' + (self.APP_VERSION || 'v1.0.0');
 
 const ASSETS_TO_CACHE = [
   './',
