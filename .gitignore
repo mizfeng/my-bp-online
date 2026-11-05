@@ -1,6 +1,9 @@
 # Personal data and original APK (Privacy Protection)
 reference/
 
+# Internal discussion and reverse-engineering spec documents
+discuss/
+
 # OS generated files
 .DS_Store
 Thumbs.db
