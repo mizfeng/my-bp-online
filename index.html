@@ -54,21 +54,6 @@
     </div>
   </header>
 
-  <!-- PWA 安裝提示橫條 (非 standalone 環境時顯示) -->
-  <div id="pwa-install-banner" class="pwa-install-banner" style="display: none;">
-    <div class="pwa-banner-left">
-      <img src="./icons/icon-192.png" class="pwa-banner-icon" alt="App">
-      <div class="pwa-banner-text">
-        <div class="pwa-banner-title">安裝「我的血壓」App</div>
-        <div class="pwa-banner-desc">獲得全螢幕獨立視窗與離線體驗</div>
-      </div>
-    </div>
-    <div class="pwa-banner-actions">
-      <button id="pwa-install-btn" class="pwa-install-btn">立即安裝</button>
-      <button id="pwa-dismiss-btn" class="pwa-dismiss-btn" aria-label="關閉">✕</button>
-    </div>
-  </div>
-
   <!-- 隱藏的 CSV 檔案上傳輸入框 -->
   <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
 
@@ -305,6 +290,9 @@
         <p>• <strong>備份與還原</strong>：可隨時透過右上角選單匯出 CSV 或轉發至 LINE / Google Drive。</p>
         <p>• <strong>致敬與借鑑</strong>：本工具復刻自經典 Android App《我的血壓》（由開發者 Mengtao Ye 創作），延續其簡潔直觀的操作手感與 CSV 格式，特此致謝。</p>
         <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee; text-align: center;">
+          <button id="about-install-pwa-btn" class="modal-btn primary" style="width: 100%; font-size: 13px; padding: 9px; margin-bottom: 8px; display: none;">
+            📲 安裝到手機桌面 App
+          </button>
           <button id="about-refresh-cache-btn" class="modal-btn" style="width: 100%; font-size: 13px; padding: 9px;">
             🔍 檢查更新
           </button>
@@ -336,15 +324,40 @@
   </div>
 
   <!-- ==========================================
-       對話框 6：iOS Safari 加入主畫面指引
+       對話框 6：安裝 App 提示 (中央對話框 Modal)
+       ========================================== -->
+  <div id="pwa-install-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">安裝「我的血壓」App</div>
+      <div class="modal-body" style="font-size: 14px; line-height: 1.6; color: #444;">
+        <div style="text-align: center; margin: 6px 0 16px 0;">
+          <img src="./icons/icon-192.png" alt="App Icon" style="width: 64px; height: 64px; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 8px;">
+          <h3 style="font-size: 17px; font-weight: 700; color: #222; margin-bottom: 4px;">安裝到手機桌面</h3>
+          <p style="font-size: 13px; color: #666;">獲得與原生 App 完全一致的最佳體驗</p>
+        </div>
+        <div style="background: #f4f9fd; border: 1px solid #d0e7f9; border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;">
+          <p style="margin-bottom: 6px;">📱 <strong>桌面秒開</strong>：獨立全螢幕視窗，不需每次開瀏覽器找網址</p>
+          <p style="margin-bottom: 6px;">⚡ <strong>完全離線</strong>：飛航模式或無網路也能隨時記錄</p>
+          <p style="margin: 0;">🔒 <strong>隱私安全</strong>：健康數據只存本機，零廣告零上傳</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="pwa-dismiss-btn" class="modal-btn">稍後再說</button>
+        <button id="pwa-install-btn" class="modal-btn primary">立即安裝</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       對話框 7：iOS / iPadOS Safari 加入主畫面指引
        ========================================== -->
   <div id="ios-install-modal" class="modal-overlay">
     <div class="modal-card">
-      <div class="modal-header">在 iPhone 上安裝 App</div>
+      <div class="modal-header">在 iPhone / iPad 上安裝 App</div>
       <div class="modal-body" style="font-size: 14px; line-height: 1.8; color: #444;">
         <p>請依照以下步驟將「我的血壓」加入手機桌面：</p>
         <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 12px 0; border: 1px solid #e9ecef;">
-          <p>1. 點擊 Safari 底部工具列的「<strong>分享</strong>」圖示（帶向上箭頭的方框）。</p>
+          <p>1. 點擊 Safari 工具列的「<strong>分享</strong>」圖示（帶向上箭頭的方框）。</p>
           <p style="margin-top: 6px;">2. 向下滑動選單，點選「<strong>加入主畫面</strong>」。</p>
           <p style="margin-top: 6px;">3. 點擊右上角「<strong>新增</strong>」即完成安裝！</p>
         </div>

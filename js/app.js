@@ -851,64 +851,84 @@
     return false;
   }
 
+  // 延遲平滑顯示安裝中央對話框 Box (PWA Install Modal)
+  function showPWAInstallModal() {
+    if (isRunningInPWA() || isPwaDismissed()) return;
+    const modal = document.getElementById('pwa-install-modal');
+    if (modal && !modal.classList.contains('active')) {
+      setTimeout(() => {
+        if (!isRunningInPWA() && !isPwaDismissed()) {
+          modal.classList.add('active');
+        }
+      }, 800);
+    }
+  }
+
   // 提前同步註冊 beforeinstallprompt bare listener，避免 async 初始化延遲錯過事件 (P2-2)
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredInstallPrompt = e;
-    const banner = document.getElementById('pwa-install-banner');
-    if (banner && !isRunningInPWA() && !isPwaDismissed()) {
-      banner.style.display = 'flex';
-    }
+    showPWAInstallModal();
   });
 
   function initPWAInstallPrompt() {
-    // 若已經在 PWA 獨立視窗模式運行，或在免打擾期內，絕不顯示安裝引導
-    if (isRunningInPWA() || isPwaDismissed()) return;
+    // 若已經在 PWA 獨立視窗模式運行，絕不顯示安裝引導
+    if (isRunningInPWA()) return;
 
-    const banner = document.getElementById('pwa-install-banner');
+    const modal = document.getElementById('pwa-install-modal');
     const installBtn = document.getElementById('pwa-install-btn');
     const dismissBtn = document.getElementById('pwa-dismiss-btn');
     const iosModal = document.getElementById('ios-install-modal');
     const iosCloseBtn = document.getElementById('ios-install-close-btn');
+    const aboutInstallBtn = document.getElementById('about-install-pwa-btn');
 
-    // 若在 initPWAInstallPrompt 呼叫前已捕捉到 beforeinstallprompt，立即顯示
-    if (deferredInstallPrompt && banner && !isRunningInPWA()) {
-      banner.style.display = 'flex';
+    // 「關於」對話框內提供「安裝到桌面」常規入口
+    if (aboutInstallBtn) {
+      aboutInstallBtn.style.display = 'block';
+      aboutInstallBtn.addEventListener('click', () => {
+        const aboutModal = document.getElementById('about-modal');
+        if (aboutModal) aboutModal.classList.remove('active');
+        if (deferredInstallPrompt) {
+          deferredInstallPrompt.prompt();
+          deferredInstallPrompt = null;
+        } else if (isIOSDevice()) {
+          if (iosModal) iosModal.classList.add('active');
+        } else if (modal) {
+          modal.classList.add('active');
+        }
+      });
     }
 
-    // iOS 或其他環境：若未安裝且非 standalone，稍候 1 秒顯示安裝引導條
-    if (isIOSDevice() && !isRunningInPWA()) {
-      setTimeout(() => {
-        if (banner && !isPwaDismissed() && !isRunningInPWA()) {
-          banner.style.display = 'flex';
-        }
-      }, 1000);
+    // 若未在免打擾期內：Android/Chrome (若已攔截到 deferredInstallPrompt) 或 iOS，延遲觸發彈窗
+    if (!isPwaDismissed() && (deferredInstallPrompt || isIOSDevice())) {
+      showPWAInstallModal();
     }
 
     // 點擊「立即安裝」
     if (installBtn) {
       installBtn.addEventListener('click', async () => {
+        if (modal) modal.classList.remove('active');
         if (deferredInstallPrompt) {
           // Android: 呼叫瀏覽器原生安裝確認彈窗
           deferredInstallPrompt.prompt();
           const choiceResult = await deferredInstallPrompt.userChoice;
           if (choiceResult && choiceResult.outcome === 'accepted') {
-            if (banner) banner.style.display = 'none';
+            if (aboutInstallBtn) aboutInstallBtn.style.display = 'none';
           }
           deferredInstallPrompt = null;
         } else if (isIOSDevice()) {
           // iOS: 彈出 iPhone / iPad 加到主畫面指引
           if (iosModal) iosModal.classList.add('active');
         } else {
-          showToast('請使用瀏覽器選單將此網頁「加到主畫面」');
+          showToast('請使用瀏覽器選單將此網頁「加到主畫面」或「安裝」');
         }
       });
     }
 
-    // 點擊「關閉」
+    // 點擊「稍後再說」
     if (dismissBtn) {
       dismissBtn.addEventListener('click', () => {
-        if (banner) banner.style.display = 'none';
+        if (modal) modal.classList.remove('active');
         try {
           localStorage.setItem('pwa_install_dismissed_until', Date.now() + 86400000 * 2);
         } catch (e) {
@@ -925,7 +945,8 @@
 
     // 監聽已安裝完成
     window.addEventListener('appinstalled', () => {
-      if (banner) banner.style.display = 'none';
+      if (modal) modal.classList.remove('active');
+      if (aboutInstallBtn) aboutInstallBtn.style.display = 'none';
       deferredInstallPrompt = null;
       showToast('🎉 「我的血壓」App 安裝成功！');
     });
@@ -942,6 +963,11 @@
           if (overlay.id === 'import-confirm-modal') {
             pendingImportRecords = [];
           }
+          if (overlay.id === 'pwa-install-modal') {
+            try {
+              localStorage.setItem('pwa_install_dismissed_until', Date.now() + 86400000 * 2);
+            } catch (err) {}
+          }
         }
       });
     });
@@ -953,6 +979,11 @@
           m.classList.remove('active');
           if (m.id === 'import-confirm-modal') {
             pendingImportRecords = [];
+          }
+          if (m.id === 'pwa-install-modal') {
+            try {
+              localStorage.setItem('pwa_install_dismissed_until', Date.now() + 86400000 * 2);
+            } catch (err) {}
           }
         });
       }
