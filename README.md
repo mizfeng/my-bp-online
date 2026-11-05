@@ -49,6 +49,20 @@ npx serve .
 ```
 開啟瀏覽器前往 `http://localhost:8080` 即可預覽。
 
+### 4. 開發環境與版本發布工作流
+- **首次 Clone 開發設定**：
+  專案內建 Git Hook 自動化工具，Clone 後請執行一次以啟用版本同步：
+  ```bash
+  git config core.hooksPath .githooks
+  ```
+- **單一來源版本發布**：
+  發布新版本時，**僅需修改 `js/version.js` 中的 `VERSION` 字串**。執行 `git commit` 時，Git Hook 會自動將版本號同步至 `sw.js` 並自動暫存提交，絕不漏改。
+- **執行排序邏輯驗證**：
+  可隨時執行內建斷言測試腳本驗證日期排序正確性：
+  ```bash
+  node scripts/test-sort.js
+  ```
+
 ---
 
 ## 致敬與借鑑說明 (Credits & Acknowledgments)

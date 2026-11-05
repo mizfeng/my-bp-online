@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 
-# 執行版本自動同步腳本
-node scripts/sync-version.js
+# 若本機環境有 node 則自動執行版本同步腳本；無 node 時安全略過不阻擋 commit
+if command -v node >/dev/null 2>&1; then
+  node scripts/sync-version.js || true
+fi

@@ -50,6 +50,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  // 帶有查詢參數 (例如 ?t= 時戳) 的動態或檢查請求，不進行快取攔截，直連網路
+  const url = new URL(event.request.url);
+  if (url.search) return;
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
