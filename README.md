@@ -5,7 +5,7 @@
 
 ---
 
-## 🌟 特色亮點
+## 特色亮點
 
 - **100% 本地隱私與持久化**：
   - 資料庫採用瀏覽器本地 `IndexedDB`，不經過任何遠端伺服器或第三方資料庫。
@@ -23,7 +23,7 @@
 
 ---
 
-## 🚀 部署與使用方式
+## 部署與使用方式
 
 ### 1. 部署到 GitHub Pages
 本專案為純靜態網頁（Vanilla HTML / CSS / JS），不需任何打包或編譯流程：
@@ -51,7 +51,7 @@ npx serve .
 
 ---
 
-## 🙏 致敬與借鑑說明 (Credits & Acknowledgments)
+## 致敬與借鑑說明 (Credits & Acknowledgments)
 
 本專案源自對經典 Android 應用程式**《我的血壓》**（套件名稱：`com.mengtaoye.bloodpressure`，由開發者 **Mengtao Ye** 創作）的喜愛與感謝。
 
@@ -64,6 +64,6 @@ npx serve .
 
 ---
 
-## 📄 授權條款
+## 授權條款
 
 本專案供個人健康追蹤與學習使用，遵循 MIT License。
