@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>我的血壓</title>
+  
+  <!-- PWA 設定 -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#12a8ee">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="我的血壓">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="icon" type="image/png" href="./icons/icon-192.png">
+
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+  <!-- 頂部導覽列 (Action Bar) -->
+  <header class="action-bar">
+    <div class="action-bar-left">
+      <img src="./icons/icon-192.png" alt="App Icon" class="action-bar-icon">
+      <span class="action-bar-title">我的血壓</span>
+    </div>
+    <div class="action-bar-right">
+      <button id="menu-overflow-btn" class="overflow-menu-btn" aria-label="更多選項">⋮</button>
+      
+      <!-- 浮動下拉選單 -->
+      <div id="menu-dropdown" class="menu-dropdown">
+        <button id="menu-export-btn" class="menu-item">
+          <span>📤</span> 匯出 / 分享 CSV
+        </button>
+        <button id="menu-import-btn" class="menu-item">
+          <span>📥</span> 匯入 CSV
+        </button>
+        <button id="menu-about-btn" class="menu-item">
+          <span>ℹ️</span> 關於
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 隱藏的 CSV 檔案上傳輸入框 -->
+  <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+
+  <!-- 頁籤導覽列 (Tabs) -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="enter">添加記錄</button>
+    <button class="tab-btn" data-tab="history">歷史記錄</button>
+    <button class="tab-btn" data-tab="statistic">統計</button>
+    <button class="tab-btn" data-tab="chart">圖表</button>
+  </nav>
+
+  <!-- 內容顯示區域 -->
+  <main class="content-area">
+
+    <!-- Tab 1: 添加記錄 -->
+    <section id="tab-enter" class="tab-pane active">
+      <div class="form-section">
+        <div class="section-label">血壓/心率</div>
+        <div id="enter-bp-card" class="bp-card-picker">
+          <span id="enter-bp-display" class="bp-display-text">120 / 80  -  72</span>
+          <span class="triangle-icon"></span>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="section-label">附註</div>
+        <input type="text" id="enter-notes-input" class="text-input" placeholder="附註 (如: 服藥劑量、身體狀態)">
+      </div>
+
+      <div class="form-section">
+        <div class="section-label">日期/時間</div>
+        <div class="date-time-row">
+          <div class="date-picker-box">
+            <span id="enter-date-display">2026年11月5日星期四</span>
+            <span class="triangle-icon"></span>
+            <input type="date" id="enter-date-input" class="date-hidden-input">
+          </div>
+          <select id="enter-time-select" class="select-input">
+            <option value="0">凌晨 (00:00 - 06:00)</option>
+            <option value="1">上午 (06:00 - 12:00)</option>
+            <option value="2">下午 (12:00 - 18:00)</option>
+            <option value="3">晚上 (18:00 - 24:00)</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="enter-save-btn" class="btn-primary-action">保存</button>
+    </section>
+
+    <!-- Tab 2: 歷史記錄 -->
+    <section id="tab-history" class="tab-pane">
+      <div class="history-header">
+        <div class="col-bp">血壓</div>
+        <div class="col-pulse">心率</div>
+        <div class="col-date">日期</div>
+        <div class="col-time">時間</div>
+      </div>
+      <div id="history-list-container" class="history-list">
+        <!-- 歷史清單動態渲染 -->
+      </div>
+    </section>
+
+    <!-- Tab 3: 統計 -->
+    <section id="tab-statistic" class="tab-pane">
+      <div class="filter-bar">
+        <select id="stat-time-filter" class="select-input">
+          <option value="all">顯示全部</option>
+          <option value="0">只顯示凌晨</option>
+          <option value="1">只顯示上午</option>
+          <option value="2">只顯示下午</option>
+          <option value="3">只顯示晚上</option>
+        </select>
+        <select id="stat-period-filter" class="select-input">
+          <option value="week">每週</option>
+          <option value="month">每月</option>
+          <option value="quarter">每季度</option>
+          <option value="year">每年</option>
+        </select>
+      </div>
+      <div id="stat-content-container">
+        <!-- 統計分組卡片動態渲染 -->
+      </div>
+    </section>
+
+    <!-- Tab 4: 圖表 -->
+    <section id="tab-chart" class="tab-pane">
+      <div class="filter-bar">
+        <select id="chart-time-filter" class="select-input">
+          <option value="all">顯示全部</option>
+          <option value="0">只顯示凌晨</option>
+          <option value="1">只顯示上午</option>
+          <option value="2">只顯示下午</option>
+          <option value="3">只顯示晚上</option>
+        </select>
+        <select id="chart-range-filter" class="select-input">
+          <option value="week">一週</option>
+          <option value="month">一個月</option>
+          <option value="3months">三個月</option>
+          <option value="year">一年</option>
+          <option value="all">全部</option>
+        </select>
+      </div>
+      <div class="chart-container-card" id="chart-canvas-container">
+        <!-- Canvas 折線圖動態注入 -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================
+       對話框 1：輸入你的血壓/心率 (滾輪 + 數字)
+       ========================================== -->
+  <div id="bp-picker-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">輸入你的血壓/心率</div>
+      <div class="modal-body">
+        <div class="wheels-wrapper">
+          <!-- 收縮壓 -->
+          <div class="wheel-column">
+            <div class="wheel-label">收縮壓 (mmHg)</div>
+            <div id="wheel-high" class="wheel-viewport"></div>
+            <input type="number" id="picker-high-input" class="wheel-num-input" min="50" max="260">
+          </div>
+          <!-- 舒張壓 -->
+          <div class="wheel-column">
+            <div class="wheel-label">舒張壓 (mmHg)</div>
+            <div id="wheel-low" class="wheel-viewport"></div>
+            <input type="number" id="picker-low-input" class="wheel-num-input" min="30" max="160">
+          </div>
+          <!-- 心率 -->
+          <div class="wheel-column">
+            <div class="wheel-label">心率 (bpm)</div>
+            <div id="wheel-pulse" class="wheel-viewport"></div>
+            <input type="number" id="picker-pulse-input" class="wheel-num-input" min="40" max="200">
+          </div>
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="picker-no-pulse-cb"> 不記錄心率
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button id="picker-cancel-btn" class="modal-btn">取消</button>
+        <button id="picker-confirm-btn" class="modal-btn primary">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       對話框 2：更改記錄 (編輯單筆紀錄)
+       ========================================== -->
+  <div id="edit-record-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">更改記錄</div>
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="section-label">血壓/心率</div>
+          <div id="edit-bp-card" class="bp-card-picker">
+            <span id="edit-bp-display" class="bp-display-text">120 / 80  -  72</span>
+            <span class="triangle-icon"></span>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="section-label">附註</div>
+          <input type="text" id="edit-notes-input" class="text-input" placeholder="附註">
+        </div>
+
+        <div class="form-section">
+          <div class="section-label">日期/時間</div>
+          <div class="date-time-row">
+            <div class="date-picker-box">
+              <span id="edit-date-display">2026年11月5日星期四</span>
+              <span class="triangle-icon"></span>
+              <input type="date" id="edit-date-input" class="date-hidden-input">
+            </div>
+            <select id="edit-time-select" class="select-input">
+              <option value="0">凌晨 (00:00 - 06:00)</option>
+              <option value="1">上午 (06:00 - 12:00)</option>
+              <option value="2">下午 (12:00 - 18:00)</option>
+              <option value="3">晚上 (18:00 - 24:00)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button id="edit-delete-btn" class="modal-btn danger">刪除</button>
+        <div style="display: flex; gap: 8px;">
+          <button id="edit-cancel-btn" class="modal-btn">取消</button>
+          <button id="edit-update-btn" class="modal-btn primary">更新</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       對話框 3：匯入模式確認 (合併 / 覆蓋)
+       ========================================== -->
+  <div id="import-confirm-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">匯入 CSV 紀錄</div>
+      <div class="modal-body">
+        <p style="font-size: 15px; color: #444; line-height: 1.6; margin-bottom: 12px;">
+          目前手機內已存在歷史血壓紀錄，請選擇匯入方式：
+        </p>
+        <p style="font-size: 13px; color: #666; line-height: 1.5;">
+          • <strong>合併資料</strong>：保留現有資料，僅補入不重複的新紀錄。<br>
+          • <strong>覆蓋全部</strong>：清空現有資料，完全以匯入檔取代。
+        </p>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button id="import-cancel-btn" class="modal-btn">取消</button>
+        <div style="display: flex; gap: 8px;">
+          <button id="import-overwrite-btn" class="modal-btn danger">覆蓋全部</button>
+          <button id="import-merge-btn" class="modal-btn primary">合併資料</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       對話框 4：關於與版本資訊
+       ========================================== -->
+  <div id="about-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">關於 我的血壓</div>
+      <div class="modal-body" style="font-size: 14px; line-height: 1.7; color: #444;">
+        <div style="text-align: center; margin-bottom: 14px;">
+          <img src="./icons/icon-192.png" style="width: 56px; height: 56px; border-radius: 12px; margin-bottom: 6px;">
+          <h3 style="color: #222; font-size: 17px;">我的血壓 (PWA)</h3>
+          <p style="color: #888; font-size: 12px;">版本: v1.0.0 (2026.11)</p>
+        </div>
+        <p>• <strong>資料儲存</strong>：<span id="about-storage-status">檢查中...</span></p>
+        <p>• <strong>本機隱私</strong>：所有健康紀錄皆僅存放在本機 IndexedDB，不連網傳輸。</p>
+        <p>• <strong>備份與還原</strong>：可隨時透過右上角選單匯出 CSV 或轉發至 LINE / Google Drive。</p>
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee; text-align: center;">
+          <button id="about-refresh-cache-btn" class="modal-btn" style="width: 100%; font-size: 13px; padding: 8px;">
+            🔄 清除快取並檢查更新
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="about-close-btn" class="modal-btn primary">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 提示組件 -->
+  <div id="toast" class="toast"></div>
+
+  <!-- 應用程式腳本 -->
+  <script src="./js/db.js"></script>
+  <script src="./js/csv.js"></script>
+  <script src="./js/chart.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
