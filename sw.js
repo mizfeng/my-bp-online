@@ -1,4 +1,4 @@
-// build: v1.0.5
+// build: v1.0.6
 /**
  * sw.js - Service Worker 離線快取管理
  * 版本號由 js/version.js 單一來源控制，此檔案無須手動更改版本
@@ -44,6 +44,13 @@ self.addEventListener('activate', (event) => {
       );
     }).then(() => self.clients.claim())
   );
+});
+
+// 支援前端主動發送 SKIP_WAITING 訊息立即接管
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // 攔截網路請求：Cache First，若快取有就先用快取，同時背景更新

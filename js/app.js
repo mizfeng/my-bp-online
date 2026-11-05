@@ -952,18 +952,44 @@
           btn.textContent = '🚀 發現新版本！';
           if (msg) {
             msg.style.color = '#12a8ee';
-            msg.textContent = '發現新版本！正在為您更新...';
+            msg.textContent = '發現新版本！正在無縫更新...';
           }
           showToast('發現新版本！即將自動更新...');
 
+          // 1. 清空舊快取，確保重新抓取新資源
           if ('caches' in window) {
             const keys = await caches.keys();
             await Promise.all(keys.map((k) => caches.delete(k)));
           }
 
-          setTimeout(() => {
+          // 2. 監聽新 Service Worker 接管事件 (controllerchange)
+          let reloaded = false;
+          const triggerReload = () => {
+            if (reloaded) return;
+            reloaded = true;
             window.location.reload();
-          }, 1200);
+          };
+
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('controllerchange', triggerReload);
+
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg) {
+              if (reg.waiting) {
+                // 傳遞訊息命令 waiting worker 立即跳過等待上位
+                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+              } else if (reg.installing) {
+                reg.installing.addEventListener('statechange', (e) => {
+                  if (e.target.state === 'installed') {
+                    e.target.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              }
+            }
+          }
+
+          // 3. 安全防呆：若 1.8 秒內 controllerchange 尚未觸發，手動強制重整
+          setTimeout(triggerReload, 1800);
           return;
         }
 
