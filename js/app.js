@@ -871,6 +871,16 @@
     showPWAInstallModal();
   });
 
+  // 當原生 prompt 無法直接喚起時，給予具體的指引 Toast
+  function showInstallFallbackToast() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+      showToast('💡 請點擊瀏覽器右上角「︙」選單 ➜ 點選「安裝應用程式」');
+    } else {
+      showToast('💡 請點擊網址列右側「安裝」圖示，或透過瀏覽器選單安裝');
+    }
+  }
+
   function initPWAInstallPrompt() {
     // 若已經在 PWA 獨立視窗模式運行，絕不顯示安裝引導
     if (isRunningInPWA()) return;
@@ -893,8 +903,8 @@
           deferredInstallPrompt = null;
         } else if (isIOSDevice()) {
           if (iosModal) iosModal.classList.add('active');
-        } else if (modal) {
-          modal.classList.add('active');
+        } else {
+          showInstallFallbackToast();
         }
       });
     }
@@ -920,12 +930,12 @@
           // iOS: 彈出 iPhone / iPad 加到主畫面指引
           if (iosModal) iosModal.classList.add('active');
         } else {
-          showToast('請使用瀏覽器選單將此網頁「加到主畫面」或「安裝」');
+          showInstallFallbackToast();
         }
       });
     }
 
-    // 點擊「稍後再說」
+    // 點擊明確按鈕「稍後再說」➜ 靜默 2 天 (48 小時)
     if (dismissBtn) {
       dismissBtn.addEventListener('click', () => {
         if (modal) modal.classList.remove('active');
@@ -965,7 +975,8 @@
           }
           if (overlay.id === 'pwa-install-modal') {
             try {
-              localStorage.setItem('pwa_install_dismissed_until', Date.now() + 86400000 * 2);
+              // 點擊外圍遮罩關閉視為隨手滑掉或誤觸，僅靜默 12 小時 (半天)
+              localStorage.setItem('pwa_install_dismissed_until', Date.now() + 43200000);
             } catch (err) {}
           }
         }
@@ -982,7 +993,8 @@
           }
           if (m.id === 'pwa-install-modal') {
             try {
-              localStorage.setItem('pwa_install_dismissed_until', Date.now() + 86400000 * 2);
+              // 按 Escape 關閉僅靜默 12 小時
+              localStorage.setItem('pwa_install_dismissed_until', Date.now() + 43200000);
             } catch (err) {}
           }
         });
