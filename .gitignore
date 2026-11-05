@@ -1,0 +1,6 @@
+# Personal data and original APK (Privacy Protection)
+reference/
+
+# OS generated files
+.DS_Store
+Thumbs.db
