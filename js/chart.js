@@ -50,7 +50,7 @@ class BPChart {
 
     // 依日期升序排序
     list.sort((a, b) => {
-      if (a.bpdate !== b.bpdate) return a.bpdate.localeCompare(b.bpdate);
+      if (a.bpdate !== b.bpdate) return a.bpdate.localeCompare(a.bpdate);
       if (a.bptime !== b.bptime) return a.bptime - b.bptime;
       return (a._id || 0) - (b._id || 0);
     });
@@ -59,10 +59,10 @@ class BPChart {
       return list;
     }
 
-    // 最新一筆紀錄的日期作為基準
+    // 最新一筆紀錄的日期作為基準 (純本地日期算術，防止時區偏移)
     const latestRecord = list[list.length - 1];
-    const latestDate = new Date(latestRecord.bpdate);
-    const startDate = new Date(latestDate);
+    const [ly, lm, ld] = latestRecord.bpdate.split('-').map(Number);
+    const startDate = new Date(ly, lm - 1, ld);
 
     switch (rangeFilter) {
       case 'week':
@@ -79,7 +79,10 @@ class BPChart {
         break;
     }
 
-    const startISO = startDate.toISOString().split('T')[0];
+    const sy = startDate.getFullYear();
+    const sm = String(startDate.getMonth() + 1).padStart(2, '0');
+    const sd = String(startDate.getDate()).padStart(2, '0');
+    const startISO = `${sy}-${sm}-${sd}`;
     return list.filter((r) => r.bpdate >= startISO);
   }
 
@@ -176,21 +179,26 @@ class BPChart {
     const getX = (i) => (records.length === 1 ? padLeft + plotW / 2 : padLeft + i * stepX);
     const getY = (val) => padTop + plotH - ((val - minY) / (maxY - minY)) * plotH;
 
-    // 3. 繪製 X 軸日期與時段標籤
+    // 3. 繪製 X 軸日期與時段標籤 (智慧標註年份)
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillStyle = this.colors.text;
     ctx.font = '10px -apple-system, sans-serif';
 
     const timeShortNames = ['夜', '早', '午', '晚'];
+    const firstYear = records[0].bpdate.split('-')[0];
+    const lastYear = records[records.length - 1].bpdate.split('-')[0];
+    const showYear = firstYear !== lastYear || this.rangeFilter === 'year' || this.rangeFilter === 'all';
 
     for (let i = 0; i < records.length; i++) {
       const r = records[i];
       const x = getX(i);
 
-      // 日期 M/D
+      // 依跨度智慧顯示 YYYY/M/D 或 M/D
       const dParts = r.bpdate.split('-');
-      const dateLabel = `${parseInt(dParts[1], 10)}/${parseInt(dParts[2], 10)}`;
+      const dateLabel = showYear
+        ? `${dParts[0]}/${parseInt(dParts[1], 10)}/${parseInt(dParts[2], 10)}`
+        : `${parseInt(dParts[1], 10)}/${parseInt(dParts[2], 10)}`;
       ctx.fillText(dateLabel, x, padTop + plotH + 8);
 
       // 時段標記

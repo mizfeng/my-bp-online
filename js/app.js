@@ -45,7 +45,7 @@
   }
 
   /**
-   * 取得今日 ISO 日期字串 (YYYY-MM-DD)
+   * 取得今日本地 ISO 日期字串 (YYYY-MM-DD)
    */
   function getTodayISO() {
     const now = new Date();
@@ -105,9 +105,9 @@
   }
 
   // ==========================================
-  // Tab 1: 添加記錄邏輯
+  // Tab 1: 添加記錄邏輯 (修復重複綁定 Bug)
   // ==========================================
-  async function initEnterTab() {
+  async function resetEnterTabState() {
     const todayISO = getTodayISO();
     const dateInput = document.getElementById('enter-date-input');
     const dateDisplay = document.getElementById('enter-date-display');
@@ -130,8 +130,11 @@
       }
     }
     updateBpDisplay('enter');
+  }
 
-    // 日期變更事件
+  function setupEnterTabListeners() {
+    const dateInput = document.getElementById('enter-date-input');
+    const dateDisplay = document.getElementById('enter-date-display');
     if (dateInput) {
       dateInput.addEventListener('change', (e) => {
         if (dateDisplay) {
@@ -140,7 +143,6 @@
       });
     }
 
-    // 保存按鈕
     const saveBtn = document.getElementById('enter-save-btn');
     if (saveBtn) {
       saveBtn.addEventListener('click', handleSaveRecord);
@@ -299,6 +301,9 @@
     };
   }
 
+  /**
+   * 關閉選擇器並執行數值範圍檢查 (P0-3 邊界驗證)
+   */
   function closeBpPickerModal(confirm = false) {
     const modal = document.getElementById('bp-picker-modal');
     if (confirm) {
@@ -307,10 +312,46 @@
       const pulseInput = document.getElementById('picker-pulse-input');
       const noPulseCb = document.getElementById('picker-no-pulse-cb');
 
+      const highRaw = highInput.value.trim();
+      const lowRaw = lowInput.value.trim();
+      const pulseRaw = pulseInput.value.trim();
+
+      // 檢查是否為空或非法字元
+      if (!highRaw || isNaN(highRaw)) {
+        showToast('請輸入有效的收縮壓數值');
+        highInput.focus();
+        return;
+      }
+      if (!lowRaw || isNaN(lowRaw)) {
+        showToast('請輸入有效的舒張壓數值');
+        lowInput.focus();
+        return;
+      }
+      if (!noPulseCb.checked && (!pulseRaw || isNaN(pulseRaw))) {
+        showToast('請輸入有效的心率數值');
+        pulseInput.focus();
+        return;
+      }
+
+      let highVal = parseInt(highRaw, 10);
+      let lowVal = parseInt(lowRaw, 10);
+      let pulseVal = noPulseCb.checked ? 72 : parseInt(pulseRaw, 10);
+
+      // Clamp 合法範圍
+      highVal = Math.min(260, Math.max(50, highVal));
+      lowVal = Math.min(160, Math.max(30, lowVal));
+      pulseVal = Math.min(200, Math.max(40, pulseVal));
+
+      // 臨床邏輯防呆：收縮壓應大於舒張壓
+      if (highVal <= lowVal) {
+        showToast('收縮壓數值應大於舒張壓');
+        return;
+      }
+
       const bpState = currentPickerMode === 'enter' ? state.enterBp : state.editingBp;
-      bpState.high = parseInt(highInput.value, 10) || 120;
-      bpState.low = parseInt(lowInput.value, 10) || 80;
-      bpState.pulse = parseInt(pulseInput.value, 10) || 72;
+      bpState.high = highVal;
+      bpState.low = lowVal;
+      bpState.pulse = pulseVal;
       bpState.noPulse = noPulseCb.checked;
 
       updateBpDisplay(currentPickerMode);
@@ -319,7 +360,7 @@
   }
 
   // ==========================================
-  // Tab 2: 歷史記錄
+  // Tab 2: 歷史記錄 (採用事件委託優化)
   // ==========================================
   async function loadHistoryList() {
     const container = document.getElementById('history-list-container');
@@ -354,13 +395,18 @@
       .join('');
 
     container.innerHTML = html;
+  }
 
-    // 綁定短按編輯事件
-    container.querySelectorAll('.history-row').forEach((row) => {
-      row.addEventListener('click', () => {
+  function setupHistoryListDelegation() {
+    const container = document.getElementById('history-list-container');
+    if (!container) return;
+    // 使用事件委託，避免每一列重複 addEventListener
+    container.addEventListener('click', (e) => {
+      const row = e.target.closest('.history-row');
+      if (row && row.dataset.id) {
         const id = parseInt(row.dataset.id, 10);
         openEditRecordModal(id);
-      });
+      }
     });
   }
 
@@ -420,18 +466,23 @@
     }
   }
 
-  async function handleDeleteRecord() {
+  // 自訂刪除對話框 (P1-5)
+  function promptDeleteRecord() {
     if (!state.editingRecord) return;
-    if (confirm('這條記錄將會被刪除，確定嗎？')) {
-      try {
-        await bpDB.deleteRecord(state.editingRecord._id);
-        document.getElementById('edit-record-modal').classList.remove('active');
-        showToast('記錄已經刪除');
-        loadHistoryList();
-      } catch (err) {
-        console.error(err);
-        showToast('刪除失敗');
-      }
+    document.getElementById('delete-confirm-modal').classList.add('active');
+  }
+
+  async function executeDeleteRecord() {
+    if (!state.editingRecord) return;
+    try {
+      await bpDB.deleteRecord(state.editingRecord._id);
+      document.getElementById('delete-confirm-modal').classList.remove('active');
+      document.getElementById('edit-record-modal').classList.remove('active');
+      showToast('記錄已經刪除');
+      loadHistoryList();
+    } catch (err) {
+      console.error(err);
+      showToast('刪除失敗');
     }
   }
 
@@ -520,7 +571,6 @@
    * 週期分組計算邏輯（每週附帶起訖日期）
    */
   function groupRecordsByPeriod(records, periodType) {
-    // 依日期升序先排好以計算前後期趨勢
     const ascList = records.slice().reverse();
     const map = new Map();
 
@@ -534,7 +584,6 @@
 
     const groupList = Array.from(map.values());
 
-    // 計算每個週期的統計值與趨勢
     let prevGroupStats = null;
     for (const grp of groupList) {
       const stats = calculateGroupStats(grp.items, prevGroupStats);
@@ -542,7 +591,6 @@
       prevGroupStats = stats;
     }
 
-    // 由新到舊呈現
     return groupList.reverse();
   }
 
@@ -582,9 +630,6 @@
     };
   }
 
-  /**
-   * 計算統計分組標題（含每週起訖日期特別優化）
-   */
   function getPeriodKeyAndTitle(dateStr, periodType) {
     const [yStr, mStr, dStr] = dateStr.split('-');
     const year = parseInt(yStr, 10);
@@ -593,7 +638,6 @@
     const dateObj = new Date(year, month - 1, day);
 
     if (periodType === 'week') {
-      // 計算 ISO 週數與該週起訖日期
       const { weekNum, weekYear, startDate, endDate } = getISOWeekDetails(dateObj);
       const startM = startDate.getMonth() + 1;
       const startD = startDate.getDate();
@@ -617,7 +661,6 @@
       return { key, title };
     }
 
-    // year
     const key = `${year}`;
     const title = `${year} 年`;
     return { key, title };
@@ -631,7 +674,6 @@
     const weekNum = Math.ceil(((date - yearStart) / 86400000 + 1) / 7);
     const weekYear = date.getUTCFullYear();
 
-    // 取得該週的星期一與星期日
     const monday = new Date(date);
     monday.setUTCDate(date.getUTCDate() - 3);
     const sunday = new Date(date);
@@ -714,12 +756,10 @@
           return;
         }
 
-        // 檢查現有資料庫是否有資料
         const existing = await bpDB.getAllRecordsDesc();
         if (existing.length > 0) {
           openImportConfirmModal(parsed);
         } else {
-          // 直接匯入
           const count = await bpDB.importRecords(parsed, false);
           showToast(`${count} 個記錄被成功恢復`);
           refreshCurrentTab();
@@ -751,6 +791,11 @@
   async function openAboutModal() {
     const modal = document.getElementById('about-modal');
     const storageStatusEl = document.getElementById('about-storage-status');
+    const versionEl = document.getElementById('about-version-text');
+
+    if (versionEl && window.APP_VERSION) {
+      versionEl.textContent = `版本: ${window.APP_VERSION} (${window.APP_BUILD_DATE || '2026.11'})`;
+    }
 
     if (storageStatusEl) {
       const persisted = await bpDB.isPersisted();
@@ -764,7 +809,7 @@
     if (state.currentTab === 'history') loadHistoryList();
     if (state.currentTab === 'statistic') loadStatistics();
     if (state.currentTab === 'chart') loadChart();
-    if (state.currentTab === 'enter') initEnterTab();
+    if (state.currentTab === 'enter') resetEnterTabState();
   }
 
   function escapeHtml(str) {
@@ -775,6 +820,26 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // ==========================================
+  // 全域 Modal 點擊遮罩與 Escape 鍵關閉 (P2-9)
+  // ==========================================
+  function setupModalDismissals() {
+    document.querySelectorAll('.modal-overlay').forEach((overlay) => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('active');
+        }
+      });
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const activeModals = document.querySelectorAll('.modal-overlay.active');
+        activeModals.forEach((m) => m.classList.remove('active'));
+      }
+    });
   }
 
   // ==========================================
@@ -792,9 +857,13 @@
     // 頂部選單
     initHeaderMenu();
 
-    // Tab 1 相關
-    await initEnterTab();
+    // Tab 1 相關 (只綁定一次 listener)
+    setupEnterTabListeners();
+    await resetEnterTabState();
     document.getElementById('enter-bp-card').addEventListener('click', () => openBpPickerModal('enter'));
+
+    // 歷史紀錄委託監聽
+    setupHistoryListDelegation();
 
     // 編輯視窗相關
     document.getElementById('edit-bp-card').addEventListener('click', () => openBpPickerModal('edit'));
@@ -802,7 +871,13 @@
       document.getElementById('edit-record-modal').classList.remove('active');
     });
     document.getElementById('edit-update-btn').addEventListener('click', handleUpdateRecord);
-    document.getElementById('edit-delete-btn').addEventListener('click', handleDeleteRecord);
+    document.getElementById('edit-delete-btn').addEventListener('click', promptDeleteRecord);
+
+    // 自訂刪除對話框
+    document.getElementById('delete-confirm-cancel-btn').addEventListener('click', () => {
+      document.getElementById('delete-confirm-modal').classList.remove('active');
+    });
+    document.getElementById('delete-confirm-ok-btn').addEventListener('click', executeDeleteRecord);
 
     // BpPicker 視窗確認 / 取消
     document.getElementById('picker-confirm-btn').addEventListener('click', () => closeBpPickerModal(true));
@@ -844,10 +919,7 @@
         if ('serviceWorker' in navigator) {
           const reg = await navigator.serviceWorker.getRegistration();
           if (reg) {
-            // 向 GitHub / 伺服器檢查 sw.js 是否有新位元組
             await reg.update();
-
-            // 若有等待安裝或新下載的 worker
             if (reg.waiting || reg.installing) {
               hasUpdate = true;
             }
@@ -873,7 +945,6 @@
           return;
         }
 
-        // 已是最新版本
         setTimeout(() => {
           btn.disabled = false;
           btn.textContent = '🔍 檢查更新';
@@ -897,6 +968,9 @@
         showToast('目前已經是最新版本');
       }
     });
+
+    // Modal 快捷關閉
+    setupModalDismissals();
 
     // 註冊 Service Worker
     if ('serviceWorker' in navigator) {

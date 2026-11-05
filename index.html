@@ -283,7 +283,7 @@
         <div style="text-align: center; margin-bottom: 14px;">
           <img src="./icons/icon-192.png" style="width: 56px; height: 56px; border-radius: 12px; margin-bottom: 6px;">
           <h3 style="color: #222; font-size: 17px;">我的血壓 (PWA)</h3>
-          <p id="about-version-text" style="color: #888; font-size: 12px;">版本: v1.0.1 (2026.11)</p>
+          <p id="about-version-text" style="color: #888; font-size: 12px;"></p>
         </div>
         <p>• <strong>資料儲存</strong>：<span id="about-storage-status">檢查中...</span></p>
         <p>• <strong>本機隱私</strong>：所有健康紀錄皆僅存放在本機 IndexedDB，不連網傳輸。</p>
@@ -302,10 +302,29 @@
     </div>
   </div>
 
+  <!-- ==========================================
+       對話框 5：刪除確認 (自訂對話框取代原生 confirm)
+       ========================================== -->
+  <div id="delete-confirm-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">確認刪除</div>
+      <div class="modal-body">
+        <p style="font-size: 15px; color: #333; line-height: 1.5;">
+          這條記錄將會被刪除，確定要刪除嗎？
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button id="delete-confirm-cancel-btn" class="modal-btn">取消</button>
+        <button id="delete-confirm-ok-btn" class="modal-btn danger">確定刪除</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast 提示組件 -->
   <div id="toast" class="toast"></div>
 
   <!-- 應用程式腳本 -->
+  <script src="./js/version.js"></script>
   <script src="./js/db.js"></script>
   <script src="./js/csv.js"></script>
   <script src="./js/chart.js"></script>

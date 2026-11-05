@@ -211,10 +211,13 @@ class BPDatabase {
       await this.clearAll();
     }
 
+    const getDedupeKey = (r) => {
+      const pulseKey = (r.bpPulse === null || r.bpPulse === undefined || r.bpPulse === '') ? 'N' : String(r.bpPulse);
+      return `${r.bpdate}|${r.bptime}|${r.bphigh}|${r.bplow}|${pulseKey}|${r.bpNotes || ''}`;
+    };
+
     const existing = overwrite ? [] : await this.getAllRecordsDesc();
-    const existingKeys = new Set(
-      existing.map((r) => `${r.bpdate}|${r.bptime}|${r.bphigh}|${r.bplow}|${r.bpPulse || ''}|${r.bpNotes || ''}`)
-    );
+    const existingKeys = new Set(existing.map(getDedupeKey));
 
     let addedCount = 0;
     return new Promise((resolve, reject) => {
@@ -222,7 +225,7 @@ class BPDatabase {
       const store = tx.objectStore(STORE_NAME);
 
       for (const item of records) {
-        const key = `${item.bpdate}|${item.bptime}|${item.bphigh}|${item.bplow}|${item.bpPulse || ''}|${item.bpNotes || ''}`;
+        const key = getDedupeKey(item);
         if (!overwrite && existingKeys.has(key)) {
           continue; // 略過完全重複
         }

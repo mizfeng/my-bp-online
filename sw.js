@@ -1,15 +1,16 @@
 /**
  * sw.js - Service Worker 離線快取管理
- * 版本: v1.0.0
+ * 版本: v1.0.5
  */
 
-const CACHE_NAME = 'my-bp-cache-v1.0.4';
+const CACHE_NAME = 'my-bp-cache-v1.0.5';
 
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './css/style.css',
+  './js/version.js',
   './js/db.js',
   './js/csv.js',
   './js/chart.js',
