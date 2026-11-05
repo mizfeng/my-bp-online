@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  var VERSION = 'v1.0.6';
+  var VERSION = 'v1.0.7';
   var BUILD_DATE = '2026.11';
 
   if (typeof window !== 'undefined') {

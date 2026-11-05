@@ -823,6 +823,95 @@
   }
 
   // ==========================================
+  // PWA 安裝偵測與 Install Box 引導
+  // ==========================================
+  let deferredInstallPrompt = null;
+
+  function isRunningInPWA() {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isIOSStandalone = window.navigator.standalone === true;
+    return isStandalone || isIOSStandalone;
+  }
+
+  function isIOSDevice() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  }
+
+  function initPWAInstallPrompt() {
+    // 若已經在 PWA 獨立視窗模式運行，絕不顯示安裝引導
+    if (isRunningInPWA()) return;
+
+    // 檢查使用者是否曾點選「關閉」（2 天內不重複打擾）
+    const dismissedUntil = localStorage.getItem('pwa_install_dismissed_until');
+    if (dismissedUntil && Date.now() < parseInt(dismissedUntil, 10)) {
+      return;
+    }
+
+    const banner = document.getElementById('pwa-install-banner');
+    const installBtn = document.getElementById('pwa-install-btn');
+    const dismissBtn = document.getElementById('pwa-dismiss-btn');
+    const iosModal = document.getElementById('ios-install-modal');
+    const iosCloseBtn = document.getElementById('ios-install-close-btn');
+
+    // Android / Chrome: 監聽 beforeinstallprompt 原生安裝提示事件
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      if (banner && !isRunningInPWA()) {
+        banner.style.display = 'flex';
+      }
+    });
+
+    // iOS 或其他環境：若未安裝且非 standalone，稍候 1 秒顯示安裝引導條
+    if (isIOSDevice() && !isRunningInPWA()) {
+      setTimeout(() => {
+        if (banner) banner.style.display = 'flex';
+      }, 1000);
+    }
+
+    // 點擊「立即安裝」
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        if (deferredInstallPrompt) {
+          // Android: 呼叫瀏覽器原生安裝確認彈窗
+          deferredInstallPrompt.prompt();
+          const choiceResult = await deferredInstallPrompt.userChoice;
+          if (choiceResult && choiceResult.outcome === 'accepted') {
+            if (banner) banner.style.display = 'none';
+          }
+          deferredInstallPrompt = null;
+        } else if (isIOSDevice()) {
+          // iOS: 彈出 iPhone 加到主畫面指引
+          if (iosModal) iosModal.classList.add('active');
+        } else {
+          showToast('請使用瀏覽器選單將此網頁「加到主畫面」');
+        }
+      });
+    }
+
+    // 點擊「關閉」
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', () => {
+        if (banner) banner.style.display = 'none';
+        localStorage.setItem('pwa_install_dismissed_until', Date.now() + 86400000 * 2);
+      });
+    }
+
+    if (iosCloseBtn && iosModal) {
+      iosCloseBtn.addEventListener('click', () => {
+        iosModal.classList.remove('active');
+      });
+    }
+
+    // 監聽已安裝完成
+    window.addEventListener('appinstalled', () => {
+      if (banner) banner.style.display = 'none';
+      deferredInstallPrompt = null;
+      showToast('🎉 「我的血壓」App 安裝成功！');
+    });
+  }
+
+  // ==========================================
   // 全域 Modal 點擊遮罩與 Escape 鍵關閉 (P2-9, P2-2)
   // ==========================================
   function setupModalDismissals() {
@@ -1019,6 +1108,9 @@
 
     // Modal 快捷關閉
     setupModalDismissals();
+
+    // 初始化 PWA 安裝橫條偵測
+    initPWAInstallPrompt();
 
     // 註冊 Service Worker
     if ('serviceWorker' in navigator) {

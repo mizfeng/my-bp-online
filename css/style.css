@@ -36,6 +36,94 @@ body {
 }
 
 /* ========================================================
+   PWA 安裝提示橫條 (Install Banner)
+   ======================================================== */
+.pwa-install-banner {
+  background: #ffffff;
+  border-bottom: 1px solid #dcdcdc;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+  z-index: 95;
+}
+
+.pwa-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.pwa-banner-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.pwa-banner-text {
+  overflow: hidden;
+}
+
+.pwa-banner-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #222222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pwa-banner-desc {
+  font-size: 11px;
+  color: #666666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pwa-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pwa-install-btn {
+  background-color: var(--primary-blue);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pwa-install-btn:active {
+  background-color: var(--primary-dark);
+}
+
+.pwa-dismiss-btn {
+  background: none;
+  border: none;
+  color: #999999;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+}
+
+.pwa-dismiss-btn:active {
+  color: #333333;
+}
+
+/* ========================================================
    頂部導覽列 (Action Bar)
    ======================================================== */
 .action-bar {

@@ -1,4 +1,4 @@
-// build: v1.0.6
+// build: v1.0.7
 /**
  * sw.js - Service Worker 離線快取管理
  * 版本號由 js/version.js 單一來源控制，此檔案無須手動更改版本

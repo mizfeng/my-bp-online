@@ -54,6 +54,21 @@
     </div>
   </header>
 
+  <!-- PWA 安裝提示橫條 (非 standalone 環境時顯示) -->
+  <div id="pwa-install-banner" class="pwa-install-banner" style="display: none;">
+    <div class="pwa-banner-left">
+      <img src="./icons/icon-192.png" class="pwa-banner-icon" alt="App">
+      <div class="pwa-banner-text">
+        <div class="pwa-banner-title">安裝「我的血壓」App</div>
+        <div class="pwa-banner-desc">獲得全螢幕獨立視窗與離線體驗</div>
+      </div>
+    </div>
+    <div class="pwa-banner-actions">
+      <button id="pwa-install-btn" class="pwa-install-btn">立即安裝</button>
+      <button id="pwa-dismiss-btn" class="pwa-dismiss-btn" aria-label="關閉">✕</button>
+    </div>
+  </div>
+
   <!-- 隱藏的 CSV 檔案上傳輸入框 -->
   <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
 
@@ -316,6 +331,27 @@
       <div class="modal-footer">
         <button id="delete-confirm-cancel-btn" class="modal-btn">取消</button>
         <button id="delete-confirm-ok-btn" class="modal-btn danger">確定刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       對話框 6：iOS Safari 加入主畫面指引
+       ========================================== -->
+  <div id="ios-install-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">在 iPhone 上安裝 App</div>
+      <div class="modal-body" style="font-size: 14px; line-height: 1.8; color: #444;">
+        <p>請依照以下步驟將「我的血壓」加入手機桌面：</p>
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 12px 0; border: 1px solid #e9ecef;">
+          <p>1. 點擊 Safari 底部工具列的「<strong>分享</strong>」圖示（帶向上箭頭的方框）。</p>
+          <p style="margin-top: 6px;">2. 向下滑動選單，點選「<strong>加入主畫面</strong>」。</p>
+          <p style="margin-top: 6px;">3. 點擊右上角「<strong>新增</strong>」即完成安裝！</p>
+        </div>
+        <p style="color: #666; font-size: 13px;">安裝後可從桌面圖示直接開啟，享有全螢幕與完全離線體驗。</p>
+      </div>
+      <div class="modal-footer">
+        <button id="ios-install-close-btn" class="modal-btn primary">我知道了</button>
       </div>
     </div>
   </div>
