@@ -834,18 +834,36 @@
   }
 
   function isIOSDevice() {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isAppleTouch = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isIPadOS = navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent);
+    return (isAppleTouch || isIPadOS) && !window.MSStream;
   }
 
-  function initPWAInstallPrompt() {
-    // 若已經在 PWA 獨立視窗模式運行，絕不顯示安裝引導
-    if (isRunningInPWA()) return;
-
-    // 檢查使用者是否曾點選「關閉」（2 天內不重複打擾）
-    const dismissedUntil = localStorage.getItem('pwa_install_dismissed_until');
-    if (dismissedUntil && Date.now() < parseInt(dismissedUntil, 10)) {
-      return;
+  function isPwaDismissed() {
+    try {
+      const dismissedUntil = localStorage.getItem('pwa_install_dismissed_until');
+      if (dismissedUntil && Date.now() < parseInt(dismissedUntil, 10)) {
+        return true;
+      }
+    } catch (e) {
+      // 避免私密模式存取 localStorage 報錯 (P2-3)
     }
+    return false;
+  }
+
+  // 提前同步註冊 beforeinstallprompt bare listener，避免 async 初始化延遲錯過事件 (P2-2)
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner && !isRunningInPWA() && !isPwaDismissed()) {
+      banner.style.display = 'flex';
+    }
+  });
+
+  function initPWAInstallPrompt() {
+    // 若已經在 PWA 獨立視窗模式運行，或在免打擾期內，絕不顯示安裝引導
+    if (isRunningInPWA() || isPwaDismissed()) return;
 
     const banner = document.getElementById('pwa-install-banner');
     const installBtn = document.getElementById('pwa-install-btn');
@@ -853,19 +871,17 @@
     const iosModal = document.getElementById('ios-install-modal');
     const iosCloseBtn = document.getElementById('ios-install-close-btn');
 
-    // Android / Chrome: 監聽 beforeinstallprompt 原生安裝提示事件
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredInstallPrompt = e;
-      if (banner && !isRunningInPWA()) {
-        banner.style.display = 'flex';
-      }
-    });
+    // 若在 initPWAInstallPrompt 呼叫前已捕捉到 beforeinstallprompt，立即顯示
+    if (deferredInstallPrompt && banner && !isRunningInPWA()) {
+      banner.style.display = 'flex';
+    }
 
     // iOS 或其他環境：若未安裝且非 standalone，稍候 1 秒顯示安裝引導條
     if (isIOSDevice() && !isRunningInPWA()) {
       setTimeout(() => {
-        if (banner) banner.style.display = 'flex';
+        if (banner && !isPwaDismissed() && !isRunningInPWA()) {
+          banner.style.display = 'flex';
+        }
       }, 1000);
     }
 
@@ -881,7 +897,7 @@
           }
           deferredInstallPrompt = null;
         } else if (isIOSDevice()) {
-          // iOS: 彈出 iPhone 加到主畫面指引
+          // iOS: 彈出 iPhone / iPad 加到主畫面指引
           if (iosModal) iosModal.classList.add('active');
         } else {
           showToast('請使用瀏覽器選單將此網頁「加到主畫面」');
@@ -893,7 +909,11 @@
     if (dismissBtn) {
       dismissBtn.addEventListener('click', () => {
         if (banner) banner.style.display = 'none';
-        localStorage.setItem('pwa_install_dismissed_until', Date.now() + 86400000 * 2);
+        try {
+          localStorage.setItem('pwa_install_dismissed_until', Date.now() + 86400000 * 2);
+        } catch (e) {
+          // 私密模式忽略儲存例外 (P2-3)
+        }
       });
     }
 
@@ -1045,13 +1065,8 @@
           }
           showToast('發現新版本！即將自動更新...');
 
-          // 1. 清空舊快取，確保重新抓取新資源
-          if ('caches' in window) {
-            const keys = await caches.keys();
-            await Promise.all(keys.map((k) => caches.delete(k)));
-          }
-
-          // 2. 監聽新 Service Worker 接管事件 (controllerchange)
+          // 1. 監聽新 Service Worker 接管事件 (controllerchange)
+          // 移除前端手動清快取，交由 sw.js activate 進行原子性快取回收，消除弱網白屏風險 (P1-1)
           let reloaded = false;
           const triggerReload = () => {
             if (reloaded) return;
@@ -1077,8 +1092,8 @@
             }
           }
 
-          // 3. 安全防呆：若 1.8 秒內 controllerchange 尚未觸發，手動強制重整
-          setTimeout(triggerReload, 1800);
+          // 2. 安全防呆：放寬至 3.5 秒，若 controllerchange 尚未觸發才手動強制重整 (P1-1)
+          setTimeout(triggerReload, 3500);
           return;
         }
 
