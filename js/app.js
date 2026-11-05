@@ -234,6 +234,16 @@
       item.dataset.value = i;
       item.textContent = i;
       if (i === currentVal) item.classList.add('selected');
+
+      // 支援點擊數字直接選取
+      item.addEventListener('click', () => {
+        inputEl.value = i;
+        wheel.scrollTop = (i - min) * itemHeight;
+        wheel.querySelectorAll('.wheel-item').forEach((it) => {
+          it.classList.toggle('selected', parseInt(it.dataset.value, 10) === i);
+        });
+      });
+
       wheel.appendChild(item);
     }
 
@@ -247,7 +257,22 @@
       wheel.scrollTop = scrollPos;
     }, 50);
 
-    // 滾動事件防抖同步
+    // 支援滑鼠實體滾輪與觸控板滾動 (Wheel Event)
+    wheel.onwheel = (e) => {
+      e.preventDefault();
+      const delta = Math.sign(e.deltaY);
+      const val = parseInt(inputEl.value, 10) || min;
+      const targetVal = Math.min(max, Math.max(min, val + delta));
+      if (targetVal !== val) {
+        inputEl.value = targetVal;
+        wheel.scrollTop = (targetVal - min) * itemHeight;
+        wheel.querySelectorAll('.wheel-item').forEach((it) => {
+          it.classList.toggle('selected', parseInt(it.dataset.value, 10) === targetVal);
+        });
+      }
+    };
+
+    // 觸控/自然滾動事件防抖同步
     let scrollTimer = null;
     wheel.onscroll = () => {
       clearTimeout(scrollTimer);

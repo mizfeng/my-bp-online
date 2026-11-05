@@ -629,6 +629,11 @@ body {
   color: #888888;
   scroll-snap-align: center;
   transition: all 0.1s;
+  cursor: pointer;
+}
+
+.wheel-item:hover {
+  color: var(--primary-blue);
 }
 
 .wheel-item.selected {
