@@ -832,17 +832,70 @@
       document.getElementById('about-modal').classList.remove('active');
     });
     document.getElementById('about-refresh-cache-btn').addEventListener('click', async () => {
-      if ('caches' in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-      }
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const reg of registrations) {
-          await reg.unregister();
+      const btn = document.getElementById('about-refresh-cache-btn');
+      const msg = document.getElementById('about-update-msg');
+      btn.disabled = true;
+      btn.textContent = '⏳ 正在檢查更新...';
+      if (msg) msg.textContent = '';
+
+      let hasUpdate = false;
+
+      try {
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (reg) {
+            // 向 GitHub / 伺服器檢查 sw.js 是否有新位元組
+            await reg.update();
+
+            // 若有等待安裝或新下載的 worker
+            if (reg.waiting || reg.installing) {
+              hasUpdate = true;
+            }
+          }
         }
+
+        if (hasUpdate) {
+          btn.textContent = '🚀 發現新版本！';
+          if (msg) {
+            msg.style.color = '#12a8ee';
+            msg.textContent = '發現新版本！正在為您更新...';
+          }
+          showToast('發現新版本！即將自動更新...');
+
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((k) => caches.delete(k)));
+          }
+
+          setTimeout(() => {
+            window.location.reload(true);
+          }, 1200);
+          return;
+        }
+
+        // 已是最新版本
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = '🔍 檢查更新';
+          if (msg) {
+            msg.style.color = '#2e7d32';
+            msg.textContent = '🎉 目前已經是最新版本！';
+          }
+          showToast('🎉 目前已經是最新版本！');
+          setTimeout(() => {
+            if (msg) msg.textContent = '';
+          }, 3500);
+        }, 500);
+      } catch (err) {
+        console.warn('檢查更新出錯:', err);
+        btn.disabled = false;
+        btn.textContent = '🔍 檢查更新';
+        if (msg) {
+          msg.style.color = '#555555';
+          msg.textContent = '目前為最新版本 (離線可用)';
+        }
+        showToast('目前已經是最新版本');
       }
-      window.location.reload(true);
     });
 
     // 註冊 Service Worker

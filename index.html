@@ -271,15 +271,16 @@
         <div style="text-align: center; margin-bottom: 14px;">
           <img src="./icons/icon-192.png" style="width: 56px; height: 56px; border-radius: 12px; margin-bottom: 6px;">
           <h3 style="color: #222; font-size: 17px;">我的血壓 (PWA)</h3>
-          <p style="color: #888; font-size: 12px;">版本: v1.0.0 (2026.11)</p>
+          <p id="about-version-text" style="color: #888; font-size: 12px;">版本: v1.0.1 (2026.11)</p>
         </div>
         <p>• <strong>資料儲存</strong>：<span id="about-storage-status">檢查中...</span></p>
         <p>• <strong>本機隱私</strong>：所有健康紀錄皆僅存放在本機 IndexedDB，不連網傳輸。</p>
         <p>• <strong>備份與還原</strong>：可隨時透過右上角選單匯出 CSV 或轉發至 LINE / Google Drive。</p>
         <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee; text-align: center;">
-          <button id="about-refresh-cache-btn" class="modal-btn" style="width: 100%; font-size: 13px; padding: 8px;">
-            🔄 清除快取並檢查更新
+          <button id="about-refresh-cache-btn" class="modal-btn" style="width: 100%; font-size: 13px; padding: 9px;">
+            🔍 檢查更新
           </button>
+          <div id="about-update-msg" style="margin-top: 8px; font-size: 12px; min-height: 18px; font-weight: 500;"></div>
         </div>
       </div>
       <div class="modal-footer">
