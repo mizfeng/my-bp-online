@@ -50,7 +50,7 @@ class BPChart {
 
     // 依日期升序排序
     list.sort((a, b) => {
-      if (a.bpdate !== b.bpdate) return a.bpdate.localeCompare(a.bpdate);
+      if (a.bpdate !== b.bpdate) return a.bpdate.localeCompare(b.bpdate);
       if (a.bptime !== b.bptime) return a.bptime - b.bptime;
       return (a._id || 0) - (b._id || 0);
     });

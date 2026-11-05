@@ -823,13 +823,16 @@
   }
 
   // ==========================================
-  // 全域 Modal 點擊遮罩與 Escape 鍵關閉 (P2-9)
+  // 全域 Modal 點擊遮罩與 Escape 鍵關閉 (P2-9, P2-2)
   // ==========================================
   function setupModalDismissals() {
     document.querySelectorAll('.modal-overlay').forEach((overlay) => {
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
           overlay.classList.remove('active');
+          if (overlay.id === 'import-confirm-modal') {
+            pendingImportRecords = [];
+          }
         }
       });
     });
@@ -837,7 +840,12 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         const activeModals = document.querySelectorAll('.modal-overlay.active');
-        activeModals.forEach((m) => m.classList.remove('active'));
+        activeModals.forEach((m) => {
+          m.classList.remove('active');
+          if (m.id === 'import-confirm-modal') {
+            pendingImportRecords = [];
+          }
+        });
       }
     });
   }
@@ -926,6 +934,20 @@
           }
         }
 
+        // 雙重保險防呆：直接 fetch 線上版 version.js 比對版本字串
+        try {
+          const res = await fetch('./js/version.js?t=' + Date.now(), { cache: 'no-store' });
+          if (res.ok) {
+            const text = await res.text();
+            const remoteMatch = text.match(/VERSION\s*=\s*['"]([^'"]+)['"]/);
+            if (remoteMatch && remoteMatch[1] && remoteMatch[1] !== window.APP_VERSION) {
+              hasUpdate = true;
+            }
+          }
+        } catch (fetchErr) {
+          // 離線狀態忽略
+        }
+
         if (hasUpdate) {
           btn.textContent = '🚀 發現新版本！';
           if (msg) {
@@ -940,7 +962,7 @@
           }
 
           setTimeout(() => {
-            window.location.reload(true);
+            window.location.reload();
           }, 1200);
           return;
         }

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# 執行版本自動同步腳本
+node scripts/sync-version.js
