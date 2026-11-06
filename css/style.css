@@ -517,6 +517,13 @@ body {
   display: flex;
 }
 
+/* 次層 / 巢狀對話框 (彈出於其他對話框之上，如編輯視窗中之滾輪選擇器與刪除確認) */
+#bp-picker-modal,
+#delete-confirm-modal,
+#ios-install-modal {
+  z-index: 1100;
+}
+
 .modal-card {
   background: #ffffff;
   border-radius: 10px;

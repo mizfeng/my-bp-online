@@ -985,19 +985,25 @@
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        const activeModals = document.querySelectorAll('.modal-overlay.active');
-        activeModals.forEach((m) => {
-          m.classList.remove('active');
-          if (m.id === 'import-confirm-modal') {
-            pendingImportRecords = [];
-          }
-          if (m.id === 'pwa-install-modal') {
-            try {
-              // 按 Escape 關閉僅靜默 12 小時
-              localStorage.setItem('pwa_install_dismissed_until', Date.now() + 43200000);
-            } catch (err) {}
-          }
+        const activeModals = Array.from(document.querySelectorAll('.modal-overlay.active'));
+        if (activeModals.length === 0) return;
+        // 若同時開啟多層對話框 (例如編輯中打開滾輪選擇器)，僅依 z-index 關閉最上層對話框
+        activeModals.sort((a, b) => {
+          const zA = parseInt(window.getComputedStyle(a).zIndex, 10) || 1000;
+          const zB = parseInt(window.getComputedStyle(b).zIndex, 10) || 1000;
+          return zB - zA;
         });
+        const topModal = activeModals[0];
+        topModal.classList.remove('active');
+        if (topModal.id === 'import-confirm-modal') {
+          pendingImportRecords = [];
+        }
+        if (topModal.id === 'pwa-install-modal') {
+          try {
+            // 按 Escape 關閉僅靜默 12 小時
+            localStorage.setItem('pwa_install_dismissed_until', Date.now() + 43200000);
+          } catch (err) {}
+        }
       }
     });
   }

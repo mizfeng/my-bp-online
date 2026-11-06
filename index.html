@@ -164,45 +164,7 @@
   </main>
 
   <!-- ==========================================
-       對話框 1：輸入你的血壓/心率 (滾輪 + 數字)
-       ========================================== -->
-  <div id="bp-picker-modal" class="modal-overlay">
-    <div class="modal-card">
-      <div class="modal-header">輸入你的血壓/心率</div>
-      <div class="modal-body">
-        <div class="wheels-wrapper">
-          <!-- 收縮壓 -->
-          <div class="wheel-column">
-            <div class="wheel-label">收縮壓 (mmHg)</div>
-            <div id="wheel-high" class="wheel-viewport"></div>
-            <input type="number" id="picker-high-input" class="wheel-num-input" min="50" max="260">
-          </div>
-          <!-- 舒張壓 -->
-          <div class="wheel-column">
-            <div class="wheel-label">舒張壓 (mmHg)</div>
-            <div id="wheel-low" class="wheel-viewport"></div>
-            <input type="number" id="picker-low-input" class="wheel-num-input" min="30" max="160">
-          </div>
-          <!-- 心率 -->
-          <div class="wheel-column">
-            <div class="wheel-label">心率 (bpm)</div>
-            <div id="wheel-pulse" class="wheel-viewport"></div>
-            <input type="number" id="picker-pulse-input" class="wheel-num-input" min="40" max="200">
-          </div>
-        </div>
-        <label class="checkbox-label">
-          <input type="checkbox" id="picker-no-pulse-cb"> 不記錄心率
-        </label>
-      </div>
-      <div class="modal-footer">
-        <button id="picker-cancel-btn" class="modal-btn">取消</button>
-        <button id="picker-confirm-btn" class="modal-btn primary">確定</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==========================================
-       對話框 2：更改記錄 (編輯單筆紀錄)
+       對話框 1：更改記錄 (編輯單筆紀錄)
        ========================================== -->
   <div id="edit-record-modal" class="modal-overlay">
     <div class="modal-card">
@@ -244,6 +206,44 @@
           <button id="edit-cancel-btn" class="modal-btn">取消</button>
           <button id="edit-update-btn" class="modal-btn primary">更新</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       對話框 2：輸入你的血壓/心率 (滾輪 + 數字)
+       ========================================== -->
+  <div id="bp-picker-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">輸入你的血壓/心率</div>
+      <div class="modal-body">
+        <div class="wheels-wrapper">
+          <!-- 收縮壓 -->
+          <div class="wheel-column">
+            <div class="wheel-label">收縮壓 (mmHg)</div>
+            <div id="wheel-high" class="wheel-viewport"></div>
+            <input type="number" id="picker-high-input" class="wheel-num-input" min="50" max="260">
+          </div>
+          <!-- 舒張壓 -->
+          <div class="wheel-column">
+            <div class="wheel-label">舒張壓 (mmHg)</div>
+            <div id="wheel-low" class="wheel-viewport"></div>
+            <input type="number" id="picker-low-input" class="wheel-num-input" min="30" max="160">
+          </div>
+          <!-- 心率 -->
+          <div class="wheel-column">
+            <div class="wheel-label">心率 (bpm)</div>
+            <div id="wheel-pulse" class="wheel-viewport"></div>
+            <input type="number" id="picker-pulse-input" class="wheel-num-input" min="40" max="200">
+          </div>
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="picker-no-pulse-cb"> 不記錄心率
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button id="picker-cancel-btn" class="modal-btn">取消</button>
+        <button id="picker-confirm-btn" class="modal-btn primary">確定</button>
       </div>
     </div>
   </div>
