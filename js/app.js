@@ -854,10 +854,12 @@
   // 延遲平滑顯示安裝中央對話框 Box (PWA Install Modal)
   function showPWAInstallModal() {
     if (isRunningInPWA() || isPwaDismissed()) return;
+    // 若當前已有任何對話框開啟，不予打擾
+    if (document.querySelector('.modal-overlay.active')) return;
     const modal = document.getElementById('pwa-install-modal');
     if (modal && !modal.classList.contains('active')) {
       setTimeout(() => {
-        if (!isRunningInPWA() && !isPwaDismissed()) {
+        if (!isRunningInPWA() && !isPwaDismissed() && !document.querySelector('.modal-overlay.active')) {
           modal.classList.add('active');
         }
       }, 800);
