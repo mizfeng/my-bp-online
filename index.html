@@ -37,7 +37,10 @@
       <span class="action-bar-title">我的血壓</span>
     </div>
     <div class="action-bar-right">
-      <button id="menu-overflow-btn" class="overflow-menu-btn" aria-label="更多選項">⋮</button>
+      <button id="menu-overflow-btn" class="overflow-menu-btn" aria-label="更多選項">
+        ⋮
+        <span id="update-badge" class="update-badge" style="display: none;"></span>
+      </button>
       
       <!-- 浮動下拉選單 -->
       <div id="menu-dropdown" class="menu-dropdown">
@@ -365,6 +368,29 @@
       </div>
       <div class="modal-footer">
         <button id="ios-install-close-btn" class="modal-btn primary">我知道了</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       對話框 8：發現新版本提示 (自動定時檢查提示)
+       ========================================== -->
+  <div id="update-prompt-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">發現新版本！</div>
+      <div class="modal-body" style="font-size: 14px; line-height: 1.6; color: #444;">
+        <div style="text-align: center; margin: 6px 0 14px 0;">
+          <div style="font-size: 38px; margin-bottom: 6px;">🚀</div>
+          <h3 id="update-prompt-version" style="font-size: 17px; font-weight: 700; color: #222; margin-bottom: 4px;">有新版本可用</h3>
+          <p style="font-size: 13px; color: #666;">立即更新以享有最新功能與穩定性提升</p>
+        </div>
+        <div style="background: #f4f9fd; border: 1px solid #d0e7f9; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #444;">
+          💡 <strong>放心更新</strong>：更新時會自動保存您目前輸入的數值，重新載入後立即為您還原！
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="update-prompt-later-btn" class="modal-btn">稍後提醒 (1小時)</button>
+        <button id="update-prompt-now-btn" class="modal-btn primary">立即更新</button>
       </div>
     </div>
   </div>

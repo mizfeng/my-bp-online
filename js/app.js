@@ -130,6 +130,9 @@
       }
     }
     updateBpDisplay('enter');
+
+    // 嘗試還原更新前保存的輸入草稿
+    restoreEnterTabDraft();
   }
 
   function setupEnterTabListeners() {
@@ -146,6 +149,13 @@
     const saveBtn = document.getElementById('enter-save-btn');
     if (saveBtn) {
       saveBtn.addEventListener('click', handleSaveRecord);
+    }
+
+    const notesInput = document.getElementById('enter-notes-input');
+    if (notesInput) {
+      notesInput.addEventListener('blur', () => {
+        setTimeout(tryPromptUpdateModal, 600);
+      });
     }
   }
 
@@ -183,6 +193,7 @@
       await bpDB.addRecord(record);
       notesInput.value = '';
       showToast('記錄已經保存');
+      setTimeout(tryPromptUpdateModal, 600);
     } catch (err) {
       console.error(err);
       showToast('保存失敗，請重試');
@@ -357,6 +368,7 @@
       updateBpDisplay(currentPickerMode);
     }
     modal.classList.remove('active');
+    setTimeout(tryPromptUpdateModal, 600);
   }
 
   // ==========================================
@@ -823,6 +835,314 @@
   }
 
   // ==========================================
+  // 應用程式更新與草稿保存/還原 (Draft & Auto-Update)
+  // ==========================================
+  let hasPendingUpdate = false;
+  let remoteNewVersion = null;
+
+  /**
+   * 將當前「添加記錄」Tab 輸入的資料存入草稿快照
+   */
+  function saveEnterTabDraft() {
+    try {
+      const dateInput = document.getElementById('enter-date-input');
+      const timeSelect = document.getElementById('enter-time-select');
+      const notesInput = document.getElementById('enter-notes-input');
+
+      const draft = {
+        high: state.enterBp.high,
+        low: state.enterBp.low,
+        pulse: state.enterBp.pulse,
+        noPulse: state.enterBp.noPulse,
+        date: dateInput ? dateInput.value : '',
+        time: timeSelect ? parseInt(timeSelect.value, 10) : 0,
+        notes: notesInput ? notesInput.value : '',
+        savedAt: Date.now(),
+      };
+
+      localStorage.setItem('bp_enter_draft', JSON.stringify(draft));
+    } catch (e) {
+      console.warn('儲存草稿失敗:', e);
+    }
+  }
+
+  /**
+   * 載入時嘗試恢復草稿
+   */
+  function restoreEnterTabDraft() {
+    try {
+      const raw = localStorage.getItem('bp_enter_draft');
+      if (!raw) return false;
+      const draft = JSON.parse(raw);
+      localStorage.removeItem('bp_enter_draft');
+
+      if (draft && draft.savedAt && Date.now() - draft.savedAt < 86400000) {
+        state.enterBp.high = draft.high || 120;
+        state.enterBp.low = draft.low || 80;
+        state.enterBp.pulse = draft.pulse || 72;
+        state.enterBp.noPulse = Boolean(draft.noPulse);
+
+        const dateInput = document.getElementById('enter-date-input');
+        const dateDisplay = document.getElementById('enter-date-display');
+        const timeSelect = document.getElementById('enter-time-select');
+        const notesInput = document.getElementById('enter-notes-input');
+
+        if (dateInput && draft.date) {
+          dateInput.value = draft.date;
+          if (dateDisplay) dateDisplay.textContent = formatDateWithWeekday(draft.date);
+        }
+        if (timeSelect && typeof draft.time === 'number') {
+          timeSelect.value = draft.time;
+        }
+        if (notesInput && draft.notes) {
+          notesInput.value = draft.notes;
+        }
+
+        updateBpDisplay('enter');
+        showToast('🎉 已自動為您保留並恢復方才輸入的內容！');
+        return true;
+      }
+    } catch (e) {
+      console.warn('還原草稿失敗:', e);
+    }
+    return false;
+  }
+
+  /**
+   * 執行更新流程：保存草稿快照 ➜ 呼叫 SKIP_WAITING ➜ controllerchange 重新載入
+   */
+  async function executeAppUpdate() {
+    saveEnterTabDraft();
+    showToast('🚀 發現新版本！即將自動更新...');
+
+    let reloaded = false;
+    const triggerReload = () => {
+      if (reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    };
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', triggerReload);
+
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        } else if (reg.installing) {
+          reg.installing.addEventListener('statechange', (e) => {
+            if (e.target.state === 'installed') {
+              e.target.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        }
+      }
+    }
+
+    setTimeout(triggerReload, 3500);
+  }
+
+  /**
+   * 判斷使用者是否正處於輸入或對話框操作中
+   */
+  function isUserBusyEditing() {
+    // 1. 是否有任何對話框處於 active (包括滾輪選擇器、更改記錄等)
+    const activeModal = document.querySelector('.modal-overlay.active');
+    if (activeModal) return true;
+
+    // 2. 焦點是否在輸入框
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) {
+      return true;
+    }
+
+    // 3. 附註欄是否有尚未保存之文字
+    const notesInput = document.getElementById('enter-notes-input');
+    if (notesInput && notesInput.value.trim().length > 0) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 是否在稍後提醒靜默期內 (預設 1 小時)
+   */
+  function isUpdateDismissed() {
+    try {
+      const until = localStorage.getItem('update_prompt_dismissed_until');
+      if (until && Date.now() < parseInt(until, 10)) {
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  /**
+   * 顯示右上角更新提示藍點 (Badge)
+   */
+  function showUpdateBadge(visible) {
+    const badge = document.getElementById('update-badge');
+    if (badge) {
+      badge.style.display = visible ? 'block' : 'none';
+    }
+  }
+
+  /**
+   * 嘗試彈出更新確認對話框 (避開使用者輸入中)
+   */
+  function tryPromptUpdateModal() {
+    if (!hasPendingUpdate) return;
+    if (isUpdateDismissed()) return;
+    if (isUserBusyEditing()) return;
+
+    const modal = document.getElementById('update-prompt-modal');
+    if (!modal || modal.classList.contains('active')) return;
+
+    const verDesc = document.getElementById('update-prompt-version');
+    if (verDesc && remoteNewVersion) {
+      verDesc.textContent = `發現新版本 (${remoteNewVersion}) 可用`;
+    }
+
+    modal.classList.add('active');
+  }
+
+  /**
+   * 檢查是否有應用程式更新
+   */
+  async function checkAppUpdate(isManual = false) {
+    const btn = document.getElementById('about-refresh-cache-btn');
+    const msg = document.getElementById('about-update-msg');
+
+    if (isManual && btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ 正在檢查更新...';
+      if (msg) msg.textContent = '';
+    }
+
+    let hasUpdate = false;
+    let newVer = null;
+
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          await reg.update();
+          if (reg.waiting || reg.installing) {
+            hasUpdate = true;
+          }
+        }
+      }
+
+      try {
+        const res = await fetch('./js/version.js?t=' + Date.now(), { cache: 'no-store' });
+        if (res.ok) {
+          const text = await res.text();
+          const remoteMatch = text.match(/VERSION\s*=\s*['"]([^'"]+)['"]/);
+          if (remoteMatch && remoteMatch[1] && remoteMatch[1] !== window.APP_VERSION) {
+            hasUpdate = true;
+            newVer = remoteMatch[1];
+          }
+        }
+      } catch (fetchErr) {
+        // 離線狀態忽略
+      }
+
+      if (hasUpdate) {
+        hasPendingUpdate = true;
+        remoteNewVersion = newVer;
+        showUpdateBadge(true);
+
+        if (isManual) {
+          if (btn) btn.textContent = '🚀 發現新版本！';
+          if (msg) {
+            msg.style.color = '#12a8ee';
+            msg.textContent = '發現新版本！正在無縫更新...';
+          }
+          await executeAppUpdate();
+        } else {
+          tryPromptUpdateModal();
+        }
+      } else {
+        if (isManual) {
+          setTimeout(() => {
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = '🔍 檢查更新';
+            }
+            if (msg) {
+              msg.style.color = '#2e7d32';
+              msg.textContent = '🎉 目前已經是最新版本！';
+            }
+            showToast('🎉 目前已經是最新版本！');
+            setTimeout(() => {
+              if (msg) msg.textContent = '';
+            }, 3500);
+          }, 500);
+        }
+      }
+    } catch (err) {
+      console.warn('檢查更新出錯:', err);
+      if (isManual) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '🔍 檢查更新';
+        }
+        if (msg) {
+          msg.style.color = '#555555';
+          msg.textContent = '目前為最新版本 (離線可用)';
+        }
+        showToast('目前已經是最新版本');
+      }
+    }
+  }
+
+  /**
+   * 初始化定時與切換視窗檢查更新
+   */
+  function initAutoUpdateChecker() {
+    // 1. 每 60 秒背景輪詢一次
+    setInterval(() => {
+      checkAppUpdate(false);
+    }, 60000);
+
+    // 2. 切換回 App 或分頁時檢查
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkAppUpdate(false);
+      }
+    });
+
+    // 3. 初始載入 4 秒後默默檢查一次
+    setTimeout(() => {
+      checkAppUpdate(false);
+    }, 4000);
+
+    // 4. 更新對話框事件綁定
+    const updateModal = document.getElementById('update-prompt-modal');
+    const updateNowBtn = document.getElementById('update-prompt-now-btn');
+    const updateLaterBtn = document.getElementById('update-prompt-later-btn');
+
+    if (updateNowBtn) {
+      updateNowBtn.addEventListener('click', async () => {
+        if (updateModal) updateModal.classList.remove('active');
+        await executeAppUpdate();
+      });
+    }
+
+    if (updateLaterBtn) {
+      updateLaterBtn.addEventListener('click', () => {
+        if (updateModal) updateModal.classList.remove('active');
+        try {
+          // 稍後提醒：1 小時內不彈窗打擾
+          localStorage.setItem('update_prompt_dismissed_until', Date.now() + 3600000);
+        } catch (e) {}
+        showToast('已設定稍後提醒 (1 小時內不再打擾)');
+      });
+    }
+  }
+
+  // ==========================================
   // PWA 安裝偵測與 Install Box 引導
   // ==========================================
   let deferredInstallPrompt = null;
@@ -981,6 +1301,12 @@
               localStorage.setItem('pwa_install_dismissed_until', Date.now() + 43200000);
             } catch (err) {}
           }
+          if (overlay.id === 'update-prompt-modal') {
+            try {
+              // 點外圍遮罩關閉更新提示，靜默 30 分鐘
+              localStorage.setItem('update_prompt_dismissed_until', Date.now() + 1800000);
+            } catch (err) {}
+          }
         }
       });
     });
@@ -1004,6 +1330,12 @@
           try {
             // 按 Escape 關閉僅靜默 12 小時
             localStorage.setItem('pwa_install_dismissed_until', Date.now() + 43200000);
+          } catch (err) {}
+        }
+        if (topModal.id === 'update-prompt-modal') {
+          try {
+            // 按 Escape 關閉更新提示靜默 30 分鐘
+            localStorage.setItem('update_prompt_dismissed_until', Date.now() + 1800000);
           } catch (err) {}
         }
       }
@@ -1074,102 +1406,8 @@
     document.getElementById('about-close-btn').addEventListener('click', () => {
       document.getElementById('about-modal').classList.remove('active');
     });
-    document.getElementById('about-refresh-cache-btn').addEventListener('click', async () => {
-      const btn = document.getElementById('about-refresh-cache-btn');
-      const msg = document.getElementById('about-update-msg');
-      btn.disabled = true;
-      btn.textContent = '⏳ 正在檢查更新...';
-      if (msg) msg.textContent = '';
-
-      let hasUpdate = false;
-
-      try {
-        if ('serviceWorker' in navigator) {
-          const reg = await navigator.serviceWorker.getRegistration();
-          if (reg) {
-            await reg.update();
-            if (reg.waiting || reg.installing) {
-              hasUpdate = true;
-            }
-          }
-        }
-
-        // 雙重保險防呆：直接 fetch 線上版 version.js 比對版本字串
-        try {
-          const res = await fetch('./js/version.js?t=' + Date.now(), { cache: 'no-store' });
-          if (res.ok) {
-            const text = await res.text();
-            const remoteMatch = text.match(/VERSION\s*=\s*['"]([^'"]+)['"]/);
-            if (remoteMatch && remoteMatch[1] && remoteMatch[1] !== window.APP_VERSION) {
-              hasUpdate = true;
-            }
-          }
-        } catch (fetchErr) {
-          // 離線狀態忽略
-        }
-
-        if (hasUpdate) {
-          btn.textContent = '🚀 發現新版本！';
-          if (msg) {
-            msg.style.color = '#12a8ee';
-            msg.textContent = '發現新版本！正在無縫更新...';
-          }
-          showToast('發現新版本！即將自動更新...');
-
-          // 1. 監聽新 Service Worker 接管事件 (controllerchange)
-          // 移除前端手動清快取，交由 sw.js activate 進行原子性快取回收，消除弱網白屏風險 (P1-1)
-          let reloaded = false;
-          const triggerReload = () => {
-            if (reloaded) return;
-            reloaded = true;
-            window.location.reload();
-          };
-
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.addEventListener('controllerchange', triggerReload);
-
-            const reg = await navigator.serviceWorker.getRegistration();
-            if (reg) {
-              if (reg.waiting) {
-                // 傳遞訊息命令 waiting worker 立即跳過等待上位
-                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-              } else if (reg.installing) {
-                reg.installing.addEventListener('statechange', (e) => {
-                  if (e.target.state === 'installed') {
-                    e.target.postMessage({ type: 'SKIP_WAITING' });
-                  }
-                });
-              }
-            }
-          }
-
-          // 2. 安全防呆：放寬至 3.5 秒，若 controllerchange 尚未觸發才手動強制重整 (P1-1)
-          setTimeout(triggerReload, 3500);
-          return;
-        }
-
-        setTimeout(() => {
-          btn.disabled = false;
-          btn.textContent = '🔍 檢查更新';
-          if (msg) {
-            msg.style.color = '#2e7d32';
-            msg.textContent = '🎉 目前已經是最新版本！';
-          }
-          showToast('🎉 目前已經是最新版本！');
-          setTimeout(() => {
-            if (msg) msg.textContent = '';
-          }, 3500);
-        }, 500);
-      } catch (err) {
-        console.warn('檢查更新出錯:', err);
-        btn.disabled = false;
-        btn.textContent = '🔍 檢查更新';
-        if (msg) {
-          msg.style.color = '#555555';
-          msg.textContent = '目前為最新版本 (離線可用)';
-        }
-        showToast('目前已經是最新版本');
-      }
+    document.getElementById('about-refresh-cache-btn').addEventListener('click', () => {
+      checkAppUpdate(true);
     });
 
     // Modal 快捷關閉
@@ -1177,6 +1415,9 @@
 
     // 初始化 PWA 安裝橫條偵測
     initPWAInstallPrompt();
+
+    // 初始化自動定時與切換視窗檢查更新 (支援輸入中防打擾與草稿保存)
+    initAutoUpdateChecker();
 
     // 註冊 Service Worker
     if ('serviceWorker' in navigator) {
